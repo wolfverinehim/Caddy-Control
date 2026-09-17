@@ -14,7 +14,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
-from .core import CaddyClient, Route, RouteManager, secure_compare_password
+from .core import CaddyClient, Route, RouteManager, password_hash_is_valid, secure_compare_password
 
 
 ROOT = Path(__file__).resolve().parent
@@ -39,8 +39,8 @@ class Settings:
     def from_env(cls) -> "Settings":
         password_hash = os.environ.get("ADMIN_PASSWORD_HASH", "").strip().lower()
         session_secret = os.environ.get("SESSION_SECRET", "").encode()
-        if len(password_hash) != 64:
-            raise RuntimeError("ADMIN_PASSWORD_HASH debe ser un SHA-256 hexadecimal de 64 caracteres.")
+        if not password_hash_is_valid(password_hash):
+            raise RuntimeError("ADMIN_PASSWORD_HASH no tiene un formato PBKDF2 válido.")
         if len(session_secret) < 32:
             raise RuntimeError("SESSION_SECRET debe tener al menos 32 caracteres.")
         return cls(
