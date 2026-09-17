@@ -92,4 +92,10 @@ form.addEventListener('submit', async event => {
 document.querySelector('#new-route').addEventListener('click', () => openEditor());
 document.querySelector('#close-dialog').addEventListener('click', () => dialog.close());
 document.querySelector('#cancel-dialog').addEventListener('click', () => dialog.close());
+document.querySelector('#logout').addEventListener('click', async () => {
+  try {
+    await api('/logout', {method: 'POST', body: '{}'});
+    window.location.assign('/login');
+  } catch (error) { message(error.message, true); }
+});
 refresh();
