@@ -83,6 +83,7 @@ Copia ambos resultados en `.env`. Para permitir acceso únicamente desde la LAN,
 ```dotenv
 CADDY_CONTROL_BIND=192.168.1.10
 CADDY_CONFIG_DIR=/srv/caddy
+CADDY_CONTROL_DATA_DIR=./data
 ```
 
 ### 3. Arranca el panel
@@ -132,6 +133,8 @@ New-NetFirewallRule `
 | `BACKUP_DIR` | Últimas 20 copias | `/data/backups` |
 | `AUDIT_PATH` | Registro de operaciones | `/data/audit.jsonl` |
 | `COOKIE_SECURE` | Cookie solo HTTPS | `false` |
+
+El directorio indicado en `CADDY_CONTROL_DATA_DIR` debe pertenecer al UID/GID `1000`, utilizado por el contenedor sin privilegios.
 
 ## Desarrollo y pruebas
 
