@@ -1,0 +1,35 @@
+services:
+  caddy-control:
+    build: .
+    image: ghcr.io/wolfverinehim/caddy-control:latest
+    container_name: caddy-control
+    restart: unless-stopped
+    environment:
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH:?Crea el SHA-256 de la contraseña}
+      SESSION_SECRET: ${SESSION_SECRET:?Usa un secreto aleatorio de al menos 32 caracteres}
+      CADDY_API_URL: http://caddy:2019
+      CADDYFILE_PATH: /config/Caddyfile
+      SITES_DIR: /config/sites.d
+      BACKUP_DIR: /data/backups
+      AUDIT_PATH: /data/audit.jsonl
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+    ports:
+      - "${CADDY_CONTROL_BIND:-0.0.0.0}:8090:8080"
+    volumes:
+      - ${CADDY_CONFIG_DIR:-./examples/caddy}:/config
+      - caddy-control-data:/data
+    networks:
+      - caddy-admin
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+
+networks:
+  caddy-admin:
+    external: true
+
+volumes:
+  caddy-control-data:

@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="csrf-token" content="__CSRF_TOKEN__">
+  <title>Caddy Control</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header>
+    <div>
+      <p class="eyebrow">REVERSE PROXY</p>
+      <h1>Caddy Control</h1>
+    </div>
+    <form method="post" action="/logout"><button class="ghost" type="submit">Cerrar sesión</button></form>
+  </header>
+  <main>
+    <section class="summary">
+      <div><span id="route-count">—</span><small>rutas gestionadas</small></div>
+      <div><span id="import-state">—</span><small>importación sites.d</small></div>
+      <button id="new-route" type="button">Nueva ruta</button>
+    </section>
+    <p id="notice" role="status" aria-live="polite"></p>
+    <section class="panel">
+      <div class="panel-title"><h2>Servicios</h2><span>Los cambios se validan y aplican sin reiniciar Caddy.</span></div>
+      <div id="route-list" class="routes"></div>
+    </section>
+  </main>
+
+  <dialog id="route-dialog">
+    <form id="route-form">
+      <div class="dialog-title"><h2>Configurar ruta</h2><button class="icon" type="button" id="close-dialog" aria-label="Cerrar">×</button></div>
+      <label>Identificador<input name="id" required pattern="[a-z0-9][a-z0-9-]{0,47}" placeholder="plex"></label>
+      <label>Nombre<input name="name" required maxlength="80" placeholder="Plex"></label>
+      <label>Dominio<input name="domain" required placeholder="plex.ejemplo.com"></label>
+      <div class="grid-3">
+        <label>Protocolo<select name="scheme"><option value="http">HTTP</option><option value="https">HTTPS</option></select></label>
+        <label class="grow">Destino<input name="upstream_host" required placeholder="192.168.1.20"></label>
+        <label>Puerto<input name="upstream_port" required type="number" min="1" max="65535" value="80"></label>
+      </div>
+      <label class="check"><input name="tls_insecure_skip_verify" type="checkbox"> Omitir validación TLS del destino (solo HTTPS)</label>
+      <div class="actions"><button class="ghost" type="button" id="cancel-dialog">Cancelar</button><button type="submit">Validar y aplicar</button></div>
+    </form>
+  </dialog>
+  <script src="/static/app.js"></script>
+</body>
+</html>

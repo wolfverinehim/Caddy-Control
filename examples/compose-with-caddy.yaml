@@ -1,0 +1,54 @@
+services:
+  caddy:
+    image: ${CADDY_IMAGE:-caddy:2}
+    container_name: caddy
+    restart: unless-stopped
+    environment:
+      BASE_DOMAIN: ${BASE_DOMAIN}
+      DUCKDNS_API_TOKEN: ${DUCKDNS_API_TOKEN:-}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./caddy:/etc/caddy
+      - caddy-data:/data
+      - caddy-state:/config
+    networks:
+      - frontend
+      - caddy-admin
+
+  caddy-control:
+    image: ghcr.io/wolfverinehim/caddy-control:latest
+    build: ..
+    restart: unless-stopped
+    environment:
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH}
+      SESSION_SECRET: ${SESSION_SECRET}
+      CADDY_API_URL: http://caddy:2019
+      CADDYFILE_PATH: /config/Caddyfile
+      SITES_DIR: /config/sites.d
+      COOKIE_SECURE: "false"
+    ports:
+      - "8090:8080"
+    volumes:
+      - ./caddy:/config
+      - caddy-control-data:/data
+    networks:
+      - caddy-admin
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    security_opt:
+      - no-new-privileges:true
+
+networks:
+  frontend:
+  caddy-admin:
+    internal: true
+
+volumes:
+  caddy-data:
+  caddy-state:
+  caddy-control-data:

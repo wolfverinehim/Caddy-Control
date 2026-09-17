@@ -1,0 +1,14 @@
+{
+    # Solo es accesible dentro de la red Docker caddy-admin; no publiques 2019.
+    admin 0.0.0.0:2019
+}
+
+*.{$BASE_DOMAIN} {
+    # Si tu imagen incorpora caddy-dns/duckdns, descomenta estas líneas:
+    # tls {
+    #     dns duckdns {$DUCKDNS_API_TOKEN}
+    # }
+
+    import /etc/caddy/sites.d/*.caddy
+    respond "Servicio no encontrado" 404
+}

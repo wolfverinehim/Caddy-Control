@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Acceso · Caddy Control</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="login-page">
+  <main class="login-card">
+    <p class="eyebrow">REVERSE PROXY</p>
+    <h1>Caddy Control</h1>
+    <p>Administra las rutas que Caddy publica en tu red.</p>
+    <form method="post" action="/login">
+      <label>Usuario<input name="username" autocomplete="username" required autofocus></label>
+      <label>Contraseña<input type="password" name="password" autocomplete="current-password" required></label>
+      <button type="submit">Entrar</button>
+    </form>
+  </main>
+</body>
+</html>
