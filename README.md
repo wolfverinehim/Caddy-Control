@@ -37,6 +37,11 @@ Caddy Control no reescribe todo el `Caddyfile`. Cada ruta se guarda como un frag
 
 La API administrativa (`2019`) debe estar disponible **solo** en una red Docker privada. Nunca publiques ese puerto en el host.
 
+El contenedor utiliza dos redes con finalidades diferentes:
+
+- `caddy-admin`: red interna compartida exclusivamente con Caddy para acceder a su API y a los servicios por nombre Docker.
+- `caddy-control-lan`: red bridge normal que permite publicar temporalmente el panel en el puerto `8090` de la LAN.
+
 ## Instalación junto a un Caddy existente
 
 ### 1. Prepara la configuración de Caddy
@@ -97,6 +102,43 @@ docker compose ps
 
 Abre `http://IP_DEL_SERVIDOR:8090`. El servicio se puede publicar posteriormente detrás del propio Caddy; en ese caso usa HTTPS y `COOKIE_SECURE=true`.
 
+La salida de `docker ps` debe mostrar una publicación similar a `192.168.1.10:8090->8080/tcp`. Si solo aparece `8080/tcp`, comprueba que el servicio está conectado tanto a `caddy-admin` como a `caddy-control-lan`.
+
+## Publicar el propio panel detrás de Caddy
+
+Una vez que Caddy Control está operativo, puede crear su propia ruta. Como Caddy y el panel comparten `caddy-admin`, utiliza el nombre Docker del servicio y no la IP o el puerto publicado del host:
+
+| Campo | Valor de ejemplo |
+|---|---|
+| Identificador | `caddy-control` |
+| Nombre | `Caddy Control` |
+| Dominio | `caddy-control.home.example.com` |
+| Protocolo | `http` |
+| Destino | `caddy-control` |
+| Puerto | `8080` |
+
+Añade también una reescritura en el DNS interno para que el dominio resuelva hacia la dirección LAN de Caddy. Después de verificar el acceso por HTTPS, configura `COOKIE_SECURE=true` y reconstruye el contenedor.
+
+El campo **Destino** acepta solamente un nombre de host o una dirección IP. No introduzcas `http://`, `https://`, barras finales ni un puerto dentro de ese campo.
+
+## Rutas gestionadas y rutas detectadas
+
+El panel separa dos orígenes:
+
+- **Rutas gestionadas**: fragmentos con metadatos creados en `sites.d`; se pueden editar y eliminar desde la interfaz.
+- **Configuración activa de Caddy**: rutas `reverse_proxy` leídas de la API administrativa. Las rutas creadas manualmente se muestran como solo lectura para evitar reescribir accidentalmente el `Caddyfile` principal.
+
+El contador de rutas activas representa destinos detectados. Una ruta con varios upstreams puede generar más de una entrada.
+
+## Acceso desde una VPN
+
+Para administrar el panel mediante WireGuard:
+
+1. El cliente debe poder alcanzar la LAN del servidor.
+2. El DNS entregado por WireGuard debe resolver el dominio interno hacia Caddy.
+3. Solo es necesario publicar HTTPS de Caddy dentro de la LAN/VPN; la API `2019` nunca debe publicarse.
+4. Si el dominio también resuelve públicamente, limita el acceso por IP de origen o mediante una política de autenticación adicional. La autenticación local del panel no sustituye el aislamiento de red.
+
 ## Crear la ruta de Plex
 
 En **Nueva ruta**, introduce:
@@ -154,6 +196,39 @@ python -m compileall -q app
 - No edita directivas arbitrarias ni el bloque TLS principal.
 - El historial se conserva como copias en disco; todavía no tiene restauración visual.
 - La autenticación es local; todavía no incorpora usuarios múltiples ni SSO/OIDC.
+
+## Diagnóstico
+
+### El puerto 8090 no está publicado
+
+Comprueba las redes y los puertos activos:
+
+```bash
+docker inspect caddy-control --format \
+'ModoRed={{.HostConfig.NetworkMode}} Puertos={{json .NetworkSettings.Ports}}'
+docker port caddy-control
+```
+
+Una red creada con `--internal` no debe ser la única red del contenedor que publica el panel. Mantén `caddy-admin` para la API privada y `caddy-control-lan` para el acceso LAN.
+
+### Caddy responde unknown field result
+
+Las versiones actuales de Caddy devuelven `/adapt` con los campos `result` y `warnings`; `/load` acepta únicamente el contenido de `result`. Este caso está corregido desde el commit `55da560`. Actualiza y reconstruye:
+
+```bash
+git pull
+docker compose up -d --build --force-recreate
+```
+
+### La ruta no aparece después de aplicarla
+
+Si Caddy rechaza la carga, Caddy Control restaura la configuración anterior y elimina el fragmento nuevo. Consulta el mensaje mostrado por el panel y los registros:
+
+```bash
+docker logs caddy-control --tail 100
+docker logs caddy --since 10m --tail 100
+docker exec caddy caddy validate --config /etc/caddy/Caddyfile
+```
 
 ## Licencia
 

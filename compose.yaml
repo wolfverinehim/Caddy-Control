@@ -21,6 +21,7 @@ services:
       - ${CADDY_CONTROL_DATA_DIR:-./data}:/data
     networks:
       - caddy-admin
+      - caddy-control-lan
     security_opt:
       - no-new-privileges:true
     read_only: true
@@ -30,3 +31,5 @@ services:
 networks:
   caddy-admin:
     external: true
+  caddy-control-lan:
+    driver: bridge
