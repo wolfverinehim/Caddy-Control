@@ -196,6 +196,19 @@ class Handler(BaseHTTPRequestHandler):
             if not self._require_auth():
                 return
             self._json(200, [asdict(route) for route in self.app.manager.list_routes()])
+        elif path == "/api/active-routes":
+            if not self._require_auth():
+                return
+            try:
+                managed_domains = {route.domain for route in self.app.manager.list_routes()}
+                routes = []
+                for route in self.app.manager.list_active_routes():
+                    item = asdict(route)
+                    item["managed"] = route.domain in managed_domains
+                    routes.append(item)
+                self._json(200, routes)
+            except Exception as exc:
+                self._json(502, {"error": str(exc)})
         elif path == "/api/status":
             if not self._require_auth():
                 return
@@ -203,7 +216,18 @@ class Handler(BaseHTTPRequestHandler):
                 import_present = "sites.d/*.caddy" in self.app.manager.caddyfile_path.read_text(encoding="utf-8")
             except OSError:
                 import_present = False
-            self._json(200, {"managed_routes": len(self.app.manager.list_routes()), "import_present": import_present})
+            try:
+                active_routes = len(self.app.manager.list_active_routes())
+                active_error = ""
+            except Exception as exc:
+                active_routes = 0
+                active_error = str(exc)
+            self._json(200, {
+                "managed_routes": len(self.app.manager.list_routes()),
+                "active_routes": active_routes,
+                "active_error": active_error,
+                "import_present": import_present,
+            })
         else:
             self.send_error(404)
 

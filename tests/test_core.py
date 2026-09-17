@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from app.core import Route, RouteManager, password_digest, password_hash_is_valid, secure_compare_password
+from app.core import Route, RouteManager, extract_active_routes, password_digest, password_hash_is_valid, secure_compare_password
 
 
 class FakeCaddy:
@@ -17,6 +17,9 @@ class FakeCaddy:
             raise RuntimeError(self.error)
         if "sites.d/*.caddy" not in caddyfile:
             raise RuntimeError("falta import")
+
+    def list_active_routes(self):
+        return []
 
 
 class RouteTests(unittest.TestCase):
@@ -49,6 +52,29 @@ class RouteTests(unittest.TestCase):
                 "upstream_host": "localhost",
                 "upstream_port": 80,
             })
+
+    def test_extracts_nested_active_reverse_proxies(self):
+        config = {
+            "apps": {"http": {"servers": {"srv0": {"routes": [{
+                "match": [{"host": ["*.example.com"]}],
+                "handle": [{"handler": "subroute", "routes": [{
+                    "match": [{"host": ["plex.example.com"]}],
+                    "handle": [{"handler": "reverse_proxy", "upstreams": [{"dial": "192.168.1.2:32400"}]}],
+                }, {
+                    "match": [{"host": ["secure.example.com"]}],
+                    "handle": [{
+                        "handler": "reverse_proxy",
+                        "transport": {"protocol": "http", "tls": {"insecure_skip_verify": True}},
+                        "upstreams": [{"dial": "192.168.1.10:9443"}],
+                    }],
+                }]}],
+            }]}}}}}
+        routes = extract_active_routes(config)
+        self.assertEqual(2, len(routes))
+        self.assertEqual("plex.example.com", routes[0].domain)
+        self.assertEqual("192.168.1.2:32400", routes[0].upstream)
+        self.assertEqual("https", routes[1].scheme)
+        self.assertTrue(routes[1].tls_insecure_skip_verify)
 
 
 class ManagerTests(unittest.TestCase):

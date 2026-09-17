@@ -3,6 +3,7 @@ const dialog = document.querySelector('#route-dialog');
 const form = document.querySelector('#route-form');
 const notice = document.querySelector('#notice');
 let routes = [];
+let activeRoutes = [];
 let status = {};
 
 function message(text, error = false) {
@@ -42,12 +43,29 @@ function render() {
   document.querySelectorAll('.delete').forEach(button => button.addEventListener('click', () => removeRoute(button.dataset.id)));
 }
 
+function renderActive() {
+  const list = document.querySelector('#active-route-list');
+  list.innerHTML = activeRoutes.length ? activeRoutes.map(route => `
+    <article class="route active-route">
+      <div class="status-dot ${route.managed ? '' : 'detected'}"></div>
+      <div class="route-name"><strong>${escapeText(route.domain)}</strong><span>Configuración activa</span></div>
+      <code>${escapeText(route.scheme)}://${escapeText(route.upstream)}</code>
+      <span class="badge ${route.managed ? 'managed' : 'readonly'}">${route.managed ? 'Gestionada' : 'Solo lectura'}</span>
+    </article>`).join('') : '<p class="empty">No se han detectado rutas reverse_proxy activas.</p>';
+  document.querySelector('#active-count').textContent = activeRoutes.length;
+}
+
 async function refresh() {
   try {
-    [routes, status] = await Promise.all([api('/api/routes'), api('/api/status')]);
+    [routes, activeRoutes, status] = await Promise.all([
+      api('/api/routes'),
+      api('/api/active-routes'),
+      api('/api/status'),
+    ]);
     document.querySelector('#import-state').textContent = status.import_present ? 'correcta' : 'falta';
     document.querySelector('#import-state').className = status.import_present ? 'ok' : 'bad';
     render();
+    renderActive();
   } catch (error) { message(error.message, true); }
 }
 
@@ -90,6 +108,7 @@ form.addEventListener('submit', async event => {
 });
 
 document.querySelector('#new-route').addEventListener('click', () => openEditor());
+document.querySelector('#refresh-active').addEventListener('click', refresh);
 document.querySelector('#close-dialog').addEventListener('click', () => dialog.close());
 document.querySelector('#cancel-dialog').addEventListener('click', () => dialog.close());
 document.querySelector('#logout').addEventListener('click', async () => {

@@ -91,8 +91,65 @@ class Route:
         return "\n".join(lines)
 
 
+@dataclass(frozen=True)
+class ActiveRoute:
+    domain: str
+    scheme: str
+    upstream: str
+    tls_insecure_skip_verify: bool = False
+
+
+def extract_active_routes(config: dict) -> list[ActiveRoute]:
+    """Extract host reverse proxies from Caddy's active JSON configuration."""
+    discovered: list[ActiveRoute] = []
+
+    def hosts_for(node: dict) -> tuple[str, ...]:
+        hosts: list[str] = []
+        matches = node.get("match", [])
+        if isinstance(matches, list):
+            for matcher in matches:
+                if not isinstance(matcher, dict):
+                    continue
+                values = matcher.get("host", [])
+                if isinstance(values, list):
+                    hosts.extend(str(value) for value in values if value)
+        return tuple(dict.fromkeys(hosts))
+
+    def walk(value: object, inherited_hosts: tuple[str, ...] = ()) -> None:
+        if isinstance(value, list):
+            for item in value:
+                walk(item, inherited_hosts)
+            return
+        if not isinstance(value, dict):
+            return
+
+        current_hosts = hosts_for(value) or inherited_hosts
+        if value.get("handler") == "reverse_proxy" and current_hosts:
+            transport = value.get("transport", {})
+            tls = transport.get("tls", {}) if isinstance(transport, dict) else {}
+            scheme = "https" if isinstance(tls, dict) and tls else "http"
+            insecure = bool(tls.get("insecure_skip_verify", False)) if isinstance(tls, dict) else False
+            upstreams = value.get("upstreams", [])
+            if isinstance(upstreams, list):
+                for upstream in upstreams:
+                    if not isinstance(upstream, dict) or not upstream.get("dial"):
+                        continue
+                    for domain in current_hosts:
+                        discovered.append(ActiveRoute(domain, scheme, str(upstream["dial"]), insecure))
+
+        for key, child in value.items():
+            if key not in {"match", "upstreams"}:
+                walk(child, current_hosts)
+
+    walk(config)
+    unique = {(route.domain, route.scheme, route.upstream): route for route in discovered}
+    return sorted(unique.values(), key=lambda route: (route.domain, route.upstream))
+
+
 class CaddyAPI(Protocol):
     def validate_and_load(self, caddyfile: str) -> None: ...
+
+    def list_active_routes(self) -> list[ActiveRoute]: ...
 
 
 class CaddyClient:
@@ -123,6 +180,22 @@ class CaddyClient:
         except json.JSONDecodeError as exc:
             raise RuntimeError("La API de Caddy devolvió una configuración no válida.") from exc
         self._post("/load", adapted, "application/json")
+
+    def list_active_routes(self) -> list[ActiveRoute]:
+        request = urllib.request.Request(self.base_url + "/config/", method="GET")
+        try:
+            with urllib.request.urlopen(request, timeout=self.timeout) as response:
+                config = json.loads(response.read())
+        except urllib.error.HTTPError as exc:
+            detail = exc.read().decode("utf-8", "replace")[:1000]
+            raise RuntimeError(f"Caddy no permitió leer su configuración ({exc.code}): {detail}") from exc
+        except urllib.error.URLError as exc:
+            raise RuntimeError(f"No se pudo conectar con la API de Caddy: {exc.reason}") from exc
+        except json.JSONDecodeError as exc:
+            raise RuntimeError("La API de Caddy devolvió una configuración ilegible.") from exc
+        if not isinstance(config, dict):
+            raise RuntimeError("La API de Caddy devolvió una configuración inesperada.")
+        return extract_active_routes(config)
 
 
 class RouteManager:
@@ -157,6 +230,9 @@ class RouteManager:
             except (OSError, ValueError, json.JSONDecodeError):
                 continue
         return routes
+
+    def list_active_routes(self) -> list[ActiveRoute]:
+        return self.caddy.list_active_routes()
 
     def _route_path(self, route_id: str) -> Path:
         if not ID_RE.fullmatch(route_id):

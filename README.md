@@ -7,6 +7,8 @@ Panel web ligero para gestionar de forma segura rutas `reverse_proxy` de Caddy. 
 ## Qué incluye
 
 - Alta, edición y eliminación de rutas desde una interfaz web.
+- Inventario de las rutas `reverse_proxy` de la configuración activa de Caddy, incluidas las creadas manualmente.
+- Distinción visual entre rutas gestionadas por el panel y rutas detectadas de solo lectura.
 - Validación mediante la API nativa de Caddy antes de cargar cambios.
 - Escritura atómica, copias automáticas y rollback si Caddy rechaza el cambio.
 - Sesiones firmadas, protección CSRF y validación estricta de entradas.
@@ -148,6 +150,7 @@ python -m compileall -q app
 ## Límites del MVP
 
 - Gestiona rutas simples HTTP/HTTPS importadas dentro de un bloque wildcard.
+- Las rutas existentes fuera de `sites.d` se muestran como inventario de solo lectura para evitar reescribir configuraciones manuales.
 - No edita directivas arbitrarias ni el bloque TLS principal.
 - El historial se conserva como copias en disco; todavía no tiene restauración visual.
 - La autenticación es local; todavía no incorpora usuarios múltiples ni SSO/OIDC.

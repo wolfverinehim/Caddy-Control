@@ -18,6 +18,7 @@
   <main>
     <section class="summary">
       <div><span id="route-count">—</span><small>rutas gestionadas</small></div>
+      <div><span id="active-count">—</span><small>rutas activas detectadas</small></div>
       <div><span id="import-state">—</span><small>importación sites.d</small></div>
       <button id="new-route" type="button">Nueva ruta</button>
     </section>
@@ -25,6 +26,13 @@
     <section class="panel">
       <div class="panel-title"><h2>Servicios</h2><span>Los cambios se validan y aplican sin reiniciar Caddy.</span></div>
       <div id="route-list" class="routes"></div>
+    </section>
+    <section class="panel secondary-panel">
+      <div class="panel-title">
+        <div><h2>Configuración activa de Caddy</h2><span>Rutas detectadas mediante la API; las externas al panel son de solo lectura.</span></div>
+        <button class="ghost compact" id="refresh-active" type="button">Actualizar</button>
+      </div>
+      <div id="active-route-list" class="routes"></div>
     </section>
   </main>
 
