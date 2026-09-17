@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from app.core import Route, RouteManager
+from app.core import Route, RouteManager, password_digest, password_hash_is_valid, secure_compare_password
 
 
 class FakeCaddy:
@@ -20,6 +20,12 @@ class FakeCaddy:
 
 
 class RouteTests(unittest.TestCase):
+    def test_password_hash(self):
+        encoded = password_digest("correct horse battery staple")
+        self.assertTrue(password_hash_is_valid(encoded))
+        self.assertTrue(secure_compare_password("correct horse battery staple", encoded))
+        self.assertFalse(secure_compare_password("wrong", encoded))
+
     def test_render_http_route(self):
         route = Route.from_mapping({
             "id": "plex",
