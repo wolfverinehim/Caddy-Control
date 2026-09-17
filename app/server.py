@@ -37,7 +37,7 @@ class Settings:
 
     @classmethod
     def from_env(cls) -> "Settings":
-        password_hash = os.environ.get("ADMIN_PASSWORD_HASH", "").strip().lower()
+        password_hash = os.environ.get("ADMIN_PASSWORD_HASH", "").strip()
         session_secret = os.environ.get("SESSION_SECRET", "").encode()
         if not password_hash_is_valid(password_hash):
             raise RuntimeError("ADMIN_PASSWORD_HASH no tiene un formato PBKDF2 válido.")
