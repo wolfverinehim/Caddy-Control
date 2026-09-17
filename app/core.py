@@ -127,7 +127,7 @@ def extract_active_routes(config: dict) -> list[ActiveRoute]:
         if value.get("handler") == "reverse_proxy" and current_hosts:
             transport = value.get("transport", {})
             tls = transport.get("tls", {}) if isinstance(transport, dict) else {}
-            scheme = "https" if isinstance(tls, dict) and tls else "http"
+            scheme = "https" if isinstance(transport, dict) and "tls" in transport else "http"
             insecure = bool(tls.get("insecure_skip_verify", False)) if isinstance(tls, dict) else False
             upstreams = value.get("upstreams", [])
             if isinstance(upstreams, list):

@@ -67,14 +67,22 @@ class RouteTests(unittest.TestCase):
                         "transport": {"protocol": "http", "tls": {"insecure_skip_verify": True}},
                         "upstreams": [{"dial": "192.168.1.10:9443"}],
                     }],
+                }, {
+                    "match": [{"host": ["tls.example.com"]}],
+                    "handle": [{
+                        "handler": "reverse_proxy",
+                        "transport": {"protocol": "http", "tls": {}},
+                        "upstreams": [{"dial": "192.168.1.11:443"}],
+                    }],
                 }]}],
             }]}}}}}
         routes = extract_active_routes(config)
-        self.assertEqual(2, len(routes))
+        self.assertEqual(3, len(routes))
         self.assertEqual("plex.example.com", routes[0].domain)
         self.assertEqual("192.168.1.2:32400", routes[0].upstream)
         self.assertEqual("https", routes[1].scheme)
         self.assertTrue(routes[1].tls_insecure_skip_verify)
+        self.assertEqual("https", routes[2].scheme)
 
 
 class ManagerTests(unittest.TestCase):
