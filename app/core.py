@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import base64
+import binascii
 import datetime as dt
 import hashlib
 import hmac
@@ -7,6 +9,7 @@ import ipaddress
 import json
 import os
 import re
+import secrets
 import shutil
 import tempfile
 import threading
@@ -242,8 +245,27 @@ class RouteManager:
 
 
 def password_digest(password: str) -> str:
-    return hashlib.sha256(password.encode("utf-8")).hexdigest()
+    salt = secrets.token_bytes(16)
+    digest = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, 600_000)
+    return "pbkdf2_sha256$600000$" + base64.urlsafe_b64encode(salt).decode() + "$" + base64.urlsafe_b64encode(digest).decode()
 
 
-def secure_compare_password(password: str, expected_hex: str) -> bool:
-    return hmac.compare_digest(password_digest(password), expected_hex.lower())
+def password_hash_is_valid(encoded: str) -> bool:
+    try:
+        algorithm, iterations, salt, digest = encoded.split("$", 3)
+        return algorithm == "pbkdf2_sha256" and int(iterations) >= 100_000 and bool(salt) and bool(digest)
+    except (ValueError, TypeError):
+        return False
+
+
+def secure_compare_password(password: str, encoded: str) -> bool:
+    if not password_hash_is_valid(encoded):
+        return False
+    _, iterations, salt_text, digest_text = encoded.split("$", 3)
+    try:
+        salt = base64.urlsafe_b64decode(salt_text)
+        expected = base64.urlsafe_b64decode(digest_text)
+    except (ValueError, binascii.Error):
+        return False
+    actual = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, int(iterations))
+    return hmac.compare_digest(actual, expected)
