@@ -2,8 +2,9 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
-from app.core import Route, RouteManager, extract_active_routes, password_digest, password_hash_is_valid, secure_compare_password
+from app.core import CaddyClient, Route, RouteManager, extract_active_routes, password_digest, password_hash_is_valid, secure_compare_password
 
 
 class FakeCaddy:
@@ -83,6 +84,24 @@ class RouteTests(unittest.TestCase):
         self.assertEqual("https", routes[1].scheme)
         self.assertTrue(routes[1].tls_insecure_skip_verify)
         self.assertEqual("https", routes[2].scheme)
+
+    def test_caddy_client_loads_only_adapt_result(self):
+        client = CaddyClient("http://caddy:2019")
+        native_config = {"apps": {"http": {"servers": {}}}}
+        calls = []
+
+        def fake_post(path, body, content_type):
+            calls.append((path, body, content_type))
+            if path == "/adapt":
+                return json.dumps({"result": native_config, "warnings": []}).encode()
+            return b""
+
+        with patch.object(client, "_post", side_effect=fake_post):
+            client.validate_and_load("example.com { respond ok }")
+
+        self.assertEqual(["/adapt", "/load"], [call[0] for call in calls])
+        self.assertEqual(native_config, json.loads(calls[1][1]))
+        self.assertNotIn("result", json.loads(calls[1][1]))
 
 
 class ManagerTests(unittest.TestCase):

@@ -174,12 +174,21 @@ class CaddyClient:
             raise RuntimeError(f"No se pudo conectar con la API de Caddy: {exc.reason}") from exc
 
     def validate_and_load(self, caddyfile: str) -> None:
-        adapted = self._post("/adapt", caddyfile.encode(), "text/caddyfile")
+        response = self._post("/adapt", caddyfile.encode(), "text/caddyfile")
         try:
-            json.loads(adapted)
+            adapted = json.loads(response)
         except json.JSONDecodeError as exc:
             raise RuntimeError("La API de Caddy devolvió una configuración no válida.") from exc
-        self._post("/load", adapted, "application/json")
+        # Caddy's /adapt endpoint wraps the native JSON config in `result`
+        # and may add a `warnings` array. /load accepts only the native config.
+        config = adapted.get("result") if isinstance(adapted, dict) and "result" in adapted else adapted
+        if not isinstance(config, dict):
+            raise RuntimeError("La API de Caddy devolvió una configuración adaptada inesperada.")
+        self._post(
+            "/load",
+            json.dumps(config, separators=(",", ":")).encode(),
+            "application/json",
+        )
 
     def list_active_routes(self) -> list[ActiveRoute]:
         request = urllib.request.Request(self.base_url + "/config/", method="GET")
