@@ -73,7 +73,7 @@ git clone https://github.com/wolfverinehim/Caddy-Control.git
 cd Caddy-Control
 cp .env.example .env
 
-printf '%s' 'TU-CONTRASEÑA-LARGA' | sha256sum
+docker run --rm -it ghcr.io/wolfverinehim/caddy-control:latest python -m app.password
 openssl rand -hex 32
 ```
 
@@ -123,7 +123,7 @@ New-NetFirewallRule `
 | Variable | Uso | Valor predeterminado |
 |---|---|---|
 | `ADMIN_USERNAME` | Usuario del panel | `admin` |
-| `ADMIN_PASSWORD_HASH` | SHA-256 de la contraseña | obligatorio |
+| `ADMIN_PASSWORD_HASH` | Hash PBKDF2-SHA256 con sal | obligatorio |
 | `SESSION_SECRET` | Firma de sesiones, mínimo 32 caracteres | obligatorio |
 | `CADDY_API_URL` | API privada de Caddy | `http://caddy:2019` |
 | `CADDYFILE_PATH` | Caddyfile compartido | `/config/Caddyfile` |
@@ -146,7 +146,7 @@ python -m compileall -q app
 - Gestiona rutas simples HTTP/HTTPS importadas dentro de un bloque wildcard.
 - No edita directivas arbitrarias ni el bloque TLS principal.
 - El historial se conserva como copias en disco; todavía no tiene restauración visual.
-- El hash SHA-256 evita guardar la contraseña en claro, aunque una futura versión migrará a Argon2id/bcrypt.
+- La autenticación es local; todavía no incorpora usuarios múltiples ni SSO/OIDC.
 
 ## Licencia
 
