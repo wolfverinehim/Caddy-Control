@@ -73,7 +73,8 @@ git clone https://github.com/wolfverinehim/Caddy-Control.git
 cd Caddy-Control
 cp .env.example .env
 
-docker run --rm -it ghcr.io/wolfverinehim/caddy-control:latest python -m app.password
+docker build -t caddy-control:local .
+docker run --rm -it caddy-control:local python -m app.password
 openssl rand -hex 32
 ```
 
