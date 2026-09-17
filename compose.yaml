@@ -18,7 +18,7 @@ services:
       - "${CADDY_CONTROL_BIND:-0.0.0.0}:8090:8080"
     volumes:
       - ${CADDY_CONFIG_DIR:-./examples/caddy}:/config
-      - caddy-control-data:/data
+      - ${CADDY_CONTROL_DATA_DIR:-./data}:/data
     networks:
       - caddy-admin
     security_opt:
@@ -30,6 +30,3 @@ services:
 networks:
   caddy-admin:
     external: true
-
-volumes:
-  caddy-control-data:
